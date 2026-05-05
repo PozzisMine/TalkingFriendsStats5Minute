@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YouTube статистика</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
 <style>
 body {
@@ -14,7 +17,11 @@ body {
   margin: 0;
   padding: 20px;
 }
-h1 { text-align: center; }
+
+h1 {
+  text-align: center;
+}
+
 .card {
   background: #1e293b;
   padding: 20px;
@@ -22,17 +29,51 @@ h1 { text-align: center; }
   margin-bottom: 15px;
   text-align: center;
 }
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 15px;
 }
+
+select, button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: #020617;
+  color: white;
+  border: 1px solid #334155;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+button {
+  background: #2563eb;
+  font-weight: bold;
+}
+
+.chart-box {
+  height: 430px;
+}
+
 canvas {
   background: #1e293b;
   border-radius: 15px;
-  padding: 10px;
 }
-.error { color: #f87171; }
+
+.error {
+  color: #f87171;
+}
+
+@media (max-width: 700px) {
+  body {
+    padding: 10px;
+  }
+
+  .chart-box {
+    height: 360px;
+  }
+}
 </style>
 </head>
 
@@ -44,26 +85,41 @@ canvas {
   <div id="updated">Загрузка...</div>
 </div>
 
+<div class="card">
+  <select id="channelSelect"></select>
+
+  <select id="typeSelect">
+    <option value="subscribers">Подписчики</option>
+    <option value="views">Просмотры</option>
+    <option value="videos">Видео</option>
+  </select>
+
+  <button onclick="resetZoom()">Сбросить график</button>
+</div>
+
 <div class="grid">
   <div class="card">
     <h3>Каналов</h3>
     <div id="channels">0</div>
   </div>
+
   <div class="card">
     <h3>Подписчиков</h3>
     <div id="subs">0</div>
   </div>
+
   <div class="card">
     <h3>Просмотров</h3>
     <div id="views">0</div>
   </div>
+
   <div class="card">
     <h3>Видео</h3>
     <div id="videos">0</div>
   </div>
 </div>
 
-<div class="card">
+<div class="card chart-box">
   <canvas id="chart"></canvas>
 </div>
 
@@ -71,9 +127,14 @@ canvas {
 const API_BASE = "https://talkingfriendsru.qpqalzmnx96.workers.dev";
 
 let chart;
+let statsData = null;
+let historyData = [];
 
-function format(n) {
-  return Number(n || 0).toLocaleString("ru-RU");
+const channelSelect = document.getElementById("channelSelect");
+const typeSelect = document.getElementById("typeSelect");
+
+function format(num) {
+  return Number(num || 0).toLocaleString("ru-RU");
 }
 
 async function load() {
@@ -81,46 +142,161 @@ async function load() {
     const statsRes = await fetch(API_BASE + "/stats.json?time=" + Date.now());
     const historyRes = await fetch(API_BASE + "/history.json?time=" + Date.now());
 
-    const stats = await statsRes.json();
-    const history = await historyRes.json();
+    statsData = await statsRes.json();
+    historyData = await historyRes.json();
 
-    if (!stats || !stats.updated_at) {
+    if (!statsData || !statsData.updated_at) {
       throw new Error("stats.json пустой или не найден");
     }
 
     document.getElementById("updated").textContent =
-      "Обновлено: " + new Date(stats.updated_at).toLocaleString("ru-RU");
+      "Обновлено: " + new Date(statsData.updated_at).toLocaleString("ru-RU");
 
-    document.getElementById("channels").textContent = format(stats.total_channels);
-    document.getElementById("subs").textContent = format(stats.total_subscribers);
-    document.getElementById("views").textContent = format(stats.total_views);
-    document.getElementById("videos").textContent = format(stats.total_videos);
+    fillChannels();
+    render();
 
-    if (Array.isArray(history) && history.length > 0) {
-      const labels = history.map(x => new Date(x.updated_at).toLocaleTimeString("ru-RU"));
-      const data = history.map(x => x.total_subscribers || 0);
-
-      if (chart) chart.destroy();
-
-      chart = new Chart(document.getElementById("chart"), {
-        type: "line",
-        data: {
-          labels: labels,
-          datasets: [{
-            label: "Подписчики",
-            data: data,
-            tension: 0.25
-          }]
-        }
-      });
-    }
-
-  } catch (e) {
+  } catch (error) {
     document.getElementById("updated").innerHTML =
-      '<span class="error">Ошибка: ' + e.message + '</span>';
-    console.error(e);
+      '<span class="error">Ошибка: ' + error.message + '</span>';
+    console.error(error);
   }
 }
+
+function fillChannels() {
+  const oldValue = channelSelect.value || "all";
+
+  channelSelect.innerHTML = "";
+
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "Все каналы";
+  channelSelect.appendChild(allOption);
+
+  statsData.channels.forEach(channel => {
+    const option = document.createElement("option");
+    option.value = channel.id;
+    option.textContent = channel.title;
+    channelSelect.appendChild(option);
+  });
+
+  channelSelect.value = oldValue;
+}
+
+function getCurrentStats() {
+  const channelId = channelSelect.value;
+
+  if (channelId === "all") {
+    return {
+      title: "Все каналы",
+      channels: statsData.total_channels,
+      subscribers: statsData.total_subscribers,
+      views: statsData.total_views,
+      videos: statsData.total_videos
+    };
+  }
+
+  const channel = statsData.channels.find(ch => ch.id === channelId);
+
+  return {
+    title: channel.title,
+    channels: 1,
+    subscribers: channel.subscribers,
+    views: channel.views,
+    videos: channel.videos
+  };
+}
+
+function getHistoryValue(item, type, channelId) {
+  if (channelId === "all") {
+    if (type === "subscribers") return item.total_subscribers;
+    if (type === "views") return item.total_views;
+    if (type === "videos") return item.total_videos;
+  }
+
+  const channel = item.channels.find(ch => ch.id === channelId);
+  if (!channel) return null;
+
+  if (type === "subscribers") return channel.subscribers;
+  if (type === "views") return channel.views;
+  if (type === "videos") return channel.videos;
+
+  return null;
+}
+
+function render() {
+  const current = getCurrentStats();
+  const type = typeSelect.value;
+  const channelId = channelSelect.value;
+
+  document.getElementById("channels").textContent = format(current.channels);
+  document.getElementById("subs").textContent = format(current.subscribers);
+  document.getElementById("views").textContent = format(current.views);
+  document.getElementById("videos").textContent = format(current.videos);
+
+  const labels = historyData.map(item =>
+    new Date(item.updated_at).toLocaleString("ru-RU")
+  );
+
+  const values = historyData.map(item =>
+    getHistoryValue(item, type, channelId)
+  );
+
+  const typeNames = {
+    subscribers: "Подписчики",
+    views: "Просмотры",
+    videos: "Видео"
+  };
+
+  if (chart) {
+    chart.destroy();
+  }
+
+  chart = new Chart(document.getElementById("chart"), {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: current.title + " — " + typeNames[type],
+        data: values,
+        tension: 0.25
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: "x"
+          },
+          zoom: {
+            wheel: {
+              enabled: true
+            },
+            pinch: {
+              enabled: true
+            },
+            mode: "x"
+          }
+        }
+      }
+    }
+  });
+}
+
+function resetZoom() {
+  if (chart) {
+    chart.resetZoom();
+  }
+}
+
+channelSelect.addEventListener("change", render);
+typeSelect.addEventListener("change", render);
 
 load();
 setInterval(load, 60000);
