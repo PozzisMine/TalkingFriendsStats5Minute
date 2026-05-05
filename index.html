@@ -3,563 +3,149 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube статистика</title>
+<title>Аналитика каналов</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hammerjs"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
 <style>
 body {
-  font-family: Arial, sans-serif;
+  font-family: Arial;
   background: #0f172a;
   color: white;
-  margin: 0;
   padding: 20px;
-}
-
-h1, h2 {
-  text-align: center;
 }
 
 .card {
   background: #1e293b;
-  padding: 20px;
+  padding: 15px;
   border-radius: 15px;
   margin-bottom: 15px;
-  text-align: center;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 15px;
-}
-
-select, button {
+select {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   border-radius: 10px;
   background: #020617;
   color: white;
   border: 1px solid #334155;
-  font-size: 16px;
-  margin-bottom: 10px;
-}
-
-button {
-  background: #2563eb;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-#avatar {
-  width: 75px;
-  height: 75px;
-  border-radius: 50%;
-  margin-bottom: 12px;
-  display: none;
-}
-
-.chart-box {
-  height: 360px;
 }
 
 canvas {
-  background: #1e293b;
-  border-radius: 15px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #1e293b;
-  border-radius: 15px;
-  overflow: hidden;
-  margin-bottom: 20px;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #334155;
-  text-align: left;
-}
-
-th {
-  background: #020617;
-}
-
-.up {
-  color: #22c55e;
-  font-weight: bold;
-}
-
-.down {
-  color: #ef4444;
-  font-weight: bold;
-}
-
-.same {
-  color: #94a3b8;
-}
-
-.error {
-  color: #f87171;
-}
-
-.table-wrap {
-  overflow-x: auto;
-}
-
-@media (max-width: 700px) {
-  body {
-    padding: 10px;
-  }
-
-  .chart-box {
-    height: 320px;
-  }
-
-  table {
-    font-size: 13px;
-  }
+  margin-top: 15px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>YouTube статистика</h1>
+<h2>📊 Аналитика каналов</h2>
 
 <div class="card">
-  <div id="updated">Загрузка...</div>
+  <div id="status">Загрузка...</div>
 </div>
 
 <div class="card">
-  <img id="avatar" src="" alt="Аватар канала">
-
-  <select id="sortType">
-    <option value="subscribers">Сортировка: подписчики</option>
-    <option value="views">Сортировка: просмотры</option>
-    <option value="videos">Сортировка: видео</option>
-  </select>
-
-  <select id="sortOrder">
-    <option value="desc">Больше → меньше</option>
-    <option value="asc">Меньше → больше</option>
-  </select>
-
-  <select id="channelSelect"></select>
-
-  <button onclick="resetAllZoom()">Сбросить графики</button>
+  <select id="daySelect"></select>
 </div>
 
-<div class="grid">
-  <div class="card">
-    <h3>Каналов</h3>
-    <div id="channels">0</div>
-  </div>
-
-  <div class="card">
-    <h3>Подписчиков</h3>
-    <div id="subs">0</div>
-    <div id="subsDiff" class="same">—</div>
-  </div>
-
-  <div class="card">
-    <h3>Просмотров</h3>
-    <div id="views">0</div>
-    <div id="viewsDiff" class="same">—</div>
-  </div>
-
-  <div class="card">
-    <h3>Видео</h3>
-    <div id="videos">0</div>
-    <div id="videosDiff" class="same">—</div>
-  </div>
-</div>
-
-<div class="card chart-box">
-  <h2>Подписчики</h2>
+<div class="card">
   <canvas id="subsChart"></canvas>
 </div>
 
-<div class="card chart-box">
-  <h2>Просмотры</h2>
+<div class="card">
   <canvas id="viewsChart"></canvas>
 </div>
 
-<div class="card chart-box">
-  <h2>Видео</h2>
+<div class="card">
   <canvas id="videosChart"></canvas>
 </div>
 
-<div class="card">
-  <h2>Итоги по дням</h2>
-
-  <select id="daySelect"></select>
-
-  <div class="grid">
-    <div class="card">
-      <h3>За день подписчиков</h3>
-      <div id="daySubs">—</div>
-    </div>
-
-    <div class="card">
-      <h3>За день просмотров</h3>
-      <div id="dayViews">—</div>
-    </div>
-
-    <div class="card">
-      <h3>За день видео</h3>
-      <div id="dayVideos">—</div>
-    </div>
-  </div>
-
-  <h2>Обновления за выбранный день</h2>
-
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Время</th>
-          <th>Подписчики</th>
-          <th>Изменение</th>
-          <th>Просмотры</th>
-          <th>Изменение</th>
-          <th>Видео</th>
-          <th>Изменение</th>
-        </tr>
-      </thead>
-      <tbody id="updatesTable"></tbody>
-    </table>
-  </div>
-</div>
-
 <script>
-const API_BASE = "https://talkingfriendsru.qpqalzmnx96.workers.dev";
+const API = "https://talkingfriendsru.qpqalzmnx96.workers.dev";
 
-let statsData = null;
-let historyData = [];
-
-let subsChart = null;
-let viewsChart = null;
-let videosChart = null;
-
-const channelSelect = document.getElementById("channelSelect");
-const sortType = document.getElementById("sortType");
-const sortOrder = document.getElementById("sortOrder");
-const daySelect = document.getElementById("daySelect");
-const avatar = document.getElementById("avatar");
-
-function format(num) {
-  return Number(num || 0).toLocaleString("ru-RU");
-}
-
-function diffText(now, old) {
-  const diff = Number(now || 0) - Number(old || 0);
-
-  if (diff > 0) return `<span class="up">▲ +${format(diff)}</span>`;
-  if (diff < 0) return `<span class="down">▼ ${format(diff)}</span>`;
-  return `<span class="same">— 0</span>`;
-}
-
-function dateKey(item) {
-  return new Date(item.updated_at).toLocaleDateString("ru-RU");
-}
+let history = [];
+let subsChart, viewsChart, videosChart;
 
 async function load() {
   try {
-    const statsRes = await fetch(API_BASE + "/stats.json?time=" + Date.now());
-    const historyRes = await fetch(API_BASE + "/history.json?time=" + Date.now());
+    const res = await fetch(API + "/history.json?time=" + Date.now());
+    history = await res.json();
 
-    statsData = await statsRes.json();
-    historyData = await historyRes.json();
-
-    if (!statsData || !statsData.updated_at) {
-      throw new Error("stats.json пустой или не найден");
-    }
-
-    if (!Array.isArray(historyData)) {
-      historyData = [];
-    }
-
-    document.getElementById("updated").textContent =
-      "Обновлено: " + new Date(statsData.updated_at).toLocaleString("ru-RU");
-
-    fillChannels();
     fillDays();
     render();
 
-  } catch (error) {
-    document.getElementById("updated").innerHTML =
-      '<span class="error">Ошибка: ' + error.message + '</span>';
-    console.error(error);
+    document.getElementById("status").textContent =
+      "Записей: " + history.length;
+
+  } catch (e) {
+    document.getElementById("status").textContent = "Ошибка: " + e.message;
   }
-}
-
-function sortChannels(channels) {
-  const type = sortType.value;
-  const order = sortOrder.value;
-
-  return [...channels].sort((a, b) => {
-    const diff = Number(b[type] || 0) - Number(a[type] || 0);
-    return order === "asc" ? -diff : diff;
-  });
-}
-
-function fillChannels() {
-  const oldValue = channelSelect.value || "all";
-
-  channelSelect.innerHTML = "";
-
-  const allOption = document.createElement("option");
-  allOption.value = "all";
-  allOption.textContent = "Все каналы";
-  channelSelect.appendChild(allOption);
-
-  const sorted = sortChannels(statsData.channels || []);
-
-  sorted.forEach(channel => {
-    const option = document.createElement("option");
-    option.value = channel.id;
-    option.textContent = "👤 " + channel.title;
-    channelSelect.appendChild(option);
-  });
-
-  const exists = [...channelSelect.options].some(opt => opt.value === oldValue);
-  channelSelect.value = exists ? oldValue : "all";
 }
 
 function fillDays() {
-  const oldValue = daySelect.value;
-  const days = [...new Set(historyData.map(dateKey))].reverse();
+  const select = document.getElementById("daySelect");
 
-  daySelect.innerHTML = "";
+  const days = [...new Set(
+    history.map(i => i.updated_at.slice(0, 10))
+  )];
 
-  days.forEach(day => {
-    const option = document.createElement("option");
-    option.value = day;
-    option.textContent = day;
-    daySelect.appendChild(option);
+  select.innerHTML = "";
+
+  days.reverse().forEach(day => {
+    const opt = document.createElement("option");
+    opt.value = day;
+    opt.textContent = day;
+    select.appendChild(opt);
   });
-
-  if (days.includes(oldValue)) {
-    daySelect.value = oldValue;
-  } else if (days.length > 0) {
-    daySelect.value = days[0];
-  }
 }
 
-function getCurrentStats() {
-  const channelId = channelSelect.value;
+function getDayData() {
+  const selected = document.getElementById("daySelect").value;
 
-  if (channelId === "all") {
-    return {
-      title: "Все каналы",
-      channels: statsData.total_channels,
-      subscribers: statsData.total_subscribers,
-      views: statsData.total_views,
-      videos: statsData.total_videos,
-      avatar: ""
-    };
-  }
-
-  const channel = statsData.channels.find(ch => ch.id === channelId);
-
-  return {
-    title: channel.title,
-    channels: 1,
-    subscribers: channel.subscribers,
-    views: channel.views,
-    videos: channel.videos,
-    avatar: channel.avatar
-  };
-}
-
-function getHistoryValue(item, type, channelId) {
-  if (channelId === "all") {
-    if (type === "subscribers") return item.total_subscribers;
-    if (type === "views") return item.total_views;
-    if (type === "videos") return item.total_videos;
-  }
-
-  const channel = item.channels.find(ch => ch.id === channelId);
-  if (!channel) return null;
-
-  if (type === "subscribers") return channel.subscribers;
-  if (type === "views") return channel.views;
-  if (type === "videos") return channel.videos;
-
-  return null;
-}
-
-function makeChart(canvasId, oldChart, label, values) {
-  if (oldChart) oldChart.destroy();
-
-  const labels = historyData.map(item =>
-    new Date(item.updated_at).toLocaleString("ru-RU")
+  return history.filter(i =>
+    i.updated_at.startsWith(selected)
   );
-
-  return new Chart(document.getElementById(canvasId), {
-    type: "line",
-    data: {
-      labels: labels,
-      datasets: [{
-        label: label,
-        data: values,
-        tension: 0.25
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      plugins: {
-        zoom: {
-          pan: {
-            enabled: true,
-            mode: "x"
-          },
-          zoom: {
-            wheel: {
-              enabled: true
-            },
-            pinch: {
-              enabled: true
-            },
-            mode: "x"
-          }
-        }
-      }
-    }
-  });
 }
 
 function render() {
-  const current = getCurrentStats();
-  const channelId = channelSelect.value;
+  const data = getDayData();
 
-  if (channelId === "all") {
-    avatar.style.display = "none";
-  } else {
-    avatar.src = current.avatar;
-    avatar.style.display = "inline-block";
-  }
-
-  document.getElementById("channels").textContent = format(current.channels);
-  document.getElementById("subs").textContent = format(current.subscribers);
-  document.getElementById("views").textContent = format(current.views);
-  document.getElementById("videos").textContent = format(current.videos);
-
-  const prev = historyData.length >= 2 ? historyData[historyData.length - 2] : null;
-
-  if (prev) {
-    document.getElementById("subsDiff").innerHTML =
-      diffText(current.subscribers, getHistoryValue(prev, "subscribers", channelId));
-
-    document.getElementById("viewsDiff").innerHTML =
-      diffText(current.views, getHistoryValue(prev, "views", channelId));
-
-    document.getElementById("videosDiff").innerHTML =
-      diffText(current.videos, getHistoryValue(prev, "videos", channelId));
-  }
-
-  const subsValues = historyData.map(item =>
-    getHistoryValue(item, "subscribers", channelId)
+  const labels = data.map(i =>
+    new Date(i.updated_at).toLocaleTimeString("ru-RU")
   );
 
-  const viewsValues = historyData.map(item =>
-    getHistoryValue(item, "views", channelId)
-  );
+  const subs = data.map(i => i.total_subscribers);
+  const views = data.map(i => i.total_views);
+  const videos = data.map(i => i.total_videos);
 
-  const videosValues = historyData.map(item =>
-    getHistoryValue(item, "videos", channelId)
-  );
-
-  subsChart = makeChart("subsChart", subsChart, current.title + " — Подписчики", subsValues);
-  viewsChart = makeChart("viewsChart", viewsChart, current.title + " — Просмотры", viewsValues);
-  videosChart = makeChart("videosChart", videosChart, current.title + " — Видео", videosValues);
-
-  renderDaily();
+  drawChart("subsChart", subsChart, labels, subs, "Подписчики", c => subsChart = c);
+  drawChart("viewsChart", viewsChart, labels, views, "Просмотры", c => viewsChart = c);
+  drawChart("videosChart", videosChart, labels, videos, "Видео", c => videosChart = c);
 }
 
-function renderDaily() {
-  const selectedDay = daySelect.value;
-  const channelId = channelSelect.value;
+function drawChart(id, chart, labels, data, label, setChart) {
+  if (chart) chart.destroy();
 
-  const dayItems = historyData.filter(item => dateKey(item) === selectedDay);
+  const ctx = document.getElementById(id);
 
-  if (dayItems.length === 0) {
-    document.getElementById("daySubs").textContent = "—";
-    document.getElementById("dayViews").textContent = "—";
-    document.getElementById("dayVideos").textContent = "—";
-    document.getElementById("updatesTable").innerHTML = "";
-    return;
-  }
-
-  const first = dayItems[0];
-  const last = dayItems[dayItems.length - 1];
-
-  document.getElementById("daySubs").innerHTML =
-    diffText(getHistoryValue(last, "subscribers", channelId), getHistoryValue(first, "subscribers", channelId));
-
-  document.getElementById("dayViews").innerHTML =
-    diffText(getHistoryValue(last, "views", channelId), getHistoryValue(first, "views", channelId));
-
-  document.getElementById("dayVideos").innerHTML =
-    diffText(getHistoryValue(last, "videos", channelId), getHistoryValue(first, "videos", channelId));
-
-  const tbody = document.getElementById("updatesTable");
-  tbody.innerHTML = "";
-
-  dayItems.forEach((item, index) => {
-    const prev = index > 0 ? dayItems[index - 1] : null;
-
-    const subs = getHistoryValue(item, "subscribers", channelId);
-    const views = getHistoryValue(item, "views", channelId);
-    const videos = getHistoryValue(item, "videos", channelId);
-
-    const prevSubs = prev ? getHistoryValue(prev, "subscribers", channelId) : subs;
-    const prevViews = prev ? getHistoryValue(prev, "views", channelId) : views;
-    const prevVideos = prev ? getHistoryValue(prev, "videos", channelId) : videos;
-
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${new Date(item.updated_at).toLocaleTimeString("ru-RU")}</td>
-      <td>${format(subs)}</td>
-      <td>${diffText(subs, prevSubs)}</td>
-      <td>${format(views)}</td>
-      <td>${diffText(views, prevViews)}</td>
-      <td>${format(videos)}</td>
-      <td>${diffText(videos, prevVideos)}</td>
-    `;
-
-    tbody.appendChild(tr);
+  const newChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label,
+        data,
+        borderColor: "#60a5fa",
+        fill: false
+      }]
+    }
   });
+
+  setChart(newChart);
 }
 
-function resetAllZoom() {
-  if (subsChart) subsChart.resetZoom();
-  if (viewsChart) viewsChart.resetZoom();
-  if (videosChart) videosChart.resetZoom();
-}
-
-channelSelect.addEventListener("change", render);
-
-sortType.addEventListener("change", () => {
-  fillChannels();
-});
-
-sortOrder.addEventListener("change", () => {
-  fillChannels();
-});
-
-daySelect.addEventListener("change", renderDaily);
+document.getElementById("daySelect").addEventListener("change", render);
 
 load();
 setInterval(load, 60000);
