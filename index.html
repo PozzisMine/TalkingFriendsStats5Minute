@@ -6,6 +6,8 @@
 <title>Аналитика каналов</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
 <style>
 body {
@@ -441,6 +443,30 @@ function drawChart(id, oldChart, labels, data, label) {
         borderColor: "#60a5fa",
         tension: 0.25
       }]
+    },
+    options: {
+      responsive: true,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: "x"
+          },
+          zoom: {
+            wheel: {
+              enabled: true
+            },
+            pinch: {
+              enabled: true
+            },
+            mode: "x"
+          }
+        }
+      }
     }
   });
 }
