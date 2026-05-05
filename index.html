@@ -1,91 +1,64 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<title>YouTube статистика</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body {
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-  padding: 20px;
-}
-h1 { text-align: center; }
-
-.card {
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 15px;
-  margin-bottom: 15px;
-  text-align: center;
-}
-</style>
-</head>
-
-<body>
-
-<h1>YouTube статистика</h1>
-
-<div class="card">
-  <div id="updated">Загрузка...</div>
-</div>
-
-<div class="card">
-  Подписчики: <span id="subs">0</span><br>
-  Просмотры: <span id="views">0</span><br>
-  Видео: <span id="videos">0</span>
-</div>
-
-<canvas id="chart"></canvas>
-
 <script>
 const API_BASE = "https://talkingfriendsru.qpqazlmnx96.workers.dev";
 
 let chart;
 
 function format(n){
-  return Number(n).toLocaleString("ru-RU");
+  return Number(n || 0).toLocaleString("ru-RU");
 }
 
 async function load(){
-  const statsRes = await fetch(API_BASE + "/stats.json?time=" + Date.now());
-  const historyRes = await fetch(API_BASE + "/history.json?time=" + Date.now());
+  try {
+    const statsRes = await fetch(API_BASE + "/stats.json");
+    const historyRes = await fetch(API_BASE + "/history.json");
 
-  const stats = await statsRes.json();
-  const history = await historyRes.json();
+    const stats = await statsRes.json();
+    const history = await historyRes.json();
 
-  document.getElementById("subs").textContent = format(stats.total_subscribers);
-  document.getElementById("views").textContent = format(stats.total_views);
-  document.getElementById("videos").textContent = format(stats.total_videos);
-
-  document.getElementById("updated").textContent =
-    "Обновлено: " + new Date(stats.updated_at).toLocaleString("ru-RU");
-
-  const labels = history.map(x => new Date(x.updated_at).toLocaleTimeString());
-  const data = history.map(x => x.total_subscribers);
-
-  if(chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("chart"), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label: "Подписчики",
-        data,
-        tension: 0.25
-      }]
+    if (!stats || !stats.updated_at) {
+      throw new Error("Нет данных stats.json");
     }
-  });
+
+    document.getElementById("subs").textContent = format(stats.total_subscribers);
+    document.getElementById("views").textContent = format(stats.total_views);
+    document.getElementById("videos").textContent = format(stats.total_videos);
+
+    document.getElementById("updated").textContent =
+      "Обновлено: " + new Date(stats.updated_at).toLocaleString("ru-RU");
+
+    // если история пустая — не ломаем сайт
+    if (!Array.isArray(history) || history.length === 0) {
+      console.log("История пока пустая");
+      return;
+    }
+
+    const labels = history.map(x =>
+      new Date(x.updated_at).toLocaleTimeString("ru-RU")
+    );
+
+    const data = history.map(x => x.total_subscribers || 0);
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(document.getElementById("chart"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "Подписчики",
+          data,
+          tension: 0.25
+        }]
+      }
+    });
+
+  } catch (e) {
+    document.getElementById("updated").textContent =
+      "Ошибка: " + e.message;
+    console.error(e);
+  }
 }
 
 load();
 setInterval(load, 60000);
 </script>
-
-</body>
-</html>
