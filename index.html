@@ -105,6 +105,27 @@ th,td{padding:8px;border-bottom:1px solid #334155}
   </div>
 
   <div class="card">
+    <h3>Таблица выбранного канала</h3>
+
+    <select id="channelTableMode">
+      <option value="minute">За минуту</option>
+      <option value="day">За день</option>
+    </select>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Время / период</th>
+          <th>Подписчики</th>
+          <th>Просмотры</th>
+          <th>Видео</th>
+        </tr>
+      </thead>
+      <tbody id="channelTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
     <h3>Подписчики канала</h3>
     <canvas id="channelSubsChart"></canvas>
   </div>
@@ -122,11 +143,18 @@ th,td{padding:8px;border-bottom:1px solid #334155}
 
 <div id="changed" style="display:none">
   <div class="card">
-    <h3>Кто изменился за последнюю минуту</h3>
+    <h3>Кто изменился</h3>
+
+    <select id="changedMode">
+      <option value="minute">За минуту</option>
+      <option value="hour">За час</option>
+      <option value="day24">За 24 часа</option>
+    </select>
 
     <table>
       <thead>
         <tr>
+          <th>Когда</th>
           <th>Канал</th>
           <th>Подписчики</th>
           <th>Просмотры</th>
@@ -269,10 +297,15 @@ function getDayData(){
   return history.filter(i => i.updated_at.startsWith(day));
 }
 
+function getChannel(item, id){
+  return item.channels.find(c => c.id === id);
+}
+
 function renderAll(){
   renderTable();
   renderOverviewCharts();
   renderChannelCharts();
+  renderChannelTable();
   renderChanged();
 }
 
@@ -326,6 +359,63 @@ function addRow(name, a, b){
   document.getElementById("tableBody").appendChild(tr);
 }
 
+function renderChannelTable(){
+  const body = document.getElementById("channelTableBody");
+  body.innerHTML = "";
+
+  const id = document.getElementById("channelSelect").value;
+  const mode = document.getElementById("channelTableMode").value;
+  const dayData = getDayData();
+
+  if(!id || dayData.length < 2){
+    body.innerHTML = `<tr><td colspan="4">Недостаточно данных</td></tr>`;
+    return;
+  }
+
+  if(mode === "minute"){
+    for(let i = 1; i < dayData.length; i++){
+      const prev = getChannel(dayData[i - 1], id);
+      const now = getChannel(dayData[i], id);
+
+      if(!prev || !now) continue;
+
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${time(dayData[i].updated_at)}</td>
+        <td>${diff(now.subscribers, prev.subscribers)}</td>
+        <td>${diff(now.views, prev.views)}</td>
+        <td>${diff(now.videos, prev.videos)}</td>
+      `;
+
+      body.prepend(tr);
+    }
+
+    return;
+  }
+
+  if(mode === "day"){
+    const first = getChannel(dayData[0], id);
+    const last = getChannel(dayData[dayData.length - 1], id);
+
+    if(!first || !last){
+      body.innerHTML = `<tr><td colspan="4">Нет данных по каналу</td></tr>`;
+      return;
+    }
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>Итого за день</td>
+      <td>${diff(last.subscribers, first.subscribers)}</td>
+      <td>${diff(last.views, first.views)}</td>
+      <td>${diff(last.videos, first.videos)}</td>
+    `;
+
+    body.appendChild(tr);
+  }
+}
+
 function renderOverviewCharts(){
   const data = getDayData();
 
@@ -354,10 +444,6 @@ function renderOverviewCharts(){
     data.map(i => i.total_videos),
     "Видео"
   );
-}
-
-function getChannel(item, id){
-  return item.channels.find(c => c.id === id);
 }
 
 function renderChannelCharts(){
@@ -399,12 +485,41 @@ function renderChanged(){
   tbody.innerHTML = "";
 
   if(history.length < 2){
-    tbody.innerHTML = `<tr><td colspan="4">Недостаточно данных</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5">Недостаточно данных</td></tr>`;
     return;
   }
 
+  const mode = document.getElementById("changedMode").value;
   const last = history[history.length - 1];
-  const prev = history[history.length - 2];
+
+  let prev;
+
+  if(mode === "minute"){
+    prev = history[history.length - 2];
+  }
+
+  if(mode === "hour"){
+    const targetTime = new Date(last.updated_at).getTime() - 60 * 60 * 1000;
+    prev = history.reduce((best, item) => {
+      const t = new Date(item.updated_at).getTime();
+      if(t <= targetTime) return item;
+      return best;
+    }, history[0]);
+  }
+
+  if(mode === "day24"){
+    const targetTime = new Date(last.updated_at).getTime() - 24 * 60 * 60 * 1000;
+    prev = history.reduce((best, item) => {
+      const t = new Date(item.updated_at).getTime();
+      if(t <= targetTime) return item;
+      return best;
+    }, history[0]);
+  }
+
+  if(!prev){
+    tbody.innerHTML = `<tr><td colspan="5">Нет старых данных</td></tr>`;
+    return;
+  }
 
   let count = 0;
 
@@ -421,17 +536,20 @@ function renderChanged(){
     count++;
 
     const tr = document.createElement("tr");
+
     tr.innerHTML = `
+      <td>${time(last.updated_at)}</td>
       <td>${now.title}</td>
       <td>${diff(now.subscribers, old.subscribers)}</td>
       <td>${diff(now.views, old.views)}</td>
       <td>${diff(now.videos, old.videos)}</td>
     `;
+
     tbody.appendChild(tr);
   });
 
   if(count === 0){
-    tbody.innerHTML = `<tr><td colspan="4">Изменений нет</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5">Изменений нет</td></tr>`;
   }
 }
 
@@ -480,19 +598,24 @@ function resetZoomAll(){
 }
 
 document.getElementById("daySelect").addEventListener("change", renderAll);
-
 document.getElementById("tableMode").addEventListener("change", renderTable);
+document.getElementById("channelTableMode").addEventListener("change", renderChannelTable);
+document.getElementById("changedMode").addEventListener("change", renderChanged);
 
 document.getElementById("timeMode").addEventListener("change", e => {
   timeMode = e.target.value;
   renderAll();
 });
 
-document.getElementById("channelSelect").addEventListener("change", renderChannelCharts);
+document.getElementById("channelSelect").addEventListener("change", () => {
+  renderChannelCharts();
+  renderChannelTable();
+});
 
 document.getElementById("sortChannels").addEventListener("change", () => {
   fillChannels();
   renderChannelCharts();
+  renderChannelTable();
 });
 
 load();
