@@ -302,7 +302,7 @@ function renderTable(){
         <td>${diff(now.total_videos, prev.total_videos)}</td>
       `;
 
-      body.appendChild(tr);
+      body.prepend(tr);
     }
 
     return;
