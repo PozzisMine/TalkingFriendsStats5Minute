@@ -60,7 +60,7 @@ th,td{padding:8px;border-bottom:1px solid #334155}
     <table>
       <thead>
         <tr>
-          <th>Период</th>
+          <th>Время / период</th>
           <th>Подписчики</th>
           <th>Просмотры</th>
           <th>Видео</th>
@@ -280,27 +280,36 @@ function renderTable(){
   const body = document.getElementById("tableBody");
   body.innerHTML = "";
 
-  if(history.length < 2) return;
-
   const mode = document.getElementById("tableMode").value;
-  const last = history[history.length - 1];
+  const dayData = getDayData();
+
+  if(dayData.length < 2){
+    body.innerHTML = `<tr><td colspan="4">Недостаточно данных</td></tr>`;
+    return;
+  }
 
   if(mode === "minute"){
-    const prev = history[history.length - 2];
-    addRow("За минуту", prev, last);
+    for(let i = 1; i < dayData.length; i++){
+      const prev = dayData[i - 1];
+      const now = dayData[i];
+
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${time(now.updated_at)}</td>
+        <td>${diff(now.total_subscribers, prev.total_subscribers)}</td>
+        <td>${diff(now.total_views, prev.total_views)}</td>
+        <td>${diff(now.total_videos, prev.total_videos)}</td>
+      `;
+
+      body.appendChild(tr);
+    }
+
     return;
   }
 
   if(mode === "day"){
-    const today = last.updated_at.slice(0,10);
-    const todayData = history.filter(i => i.updated_at.startsWith(today));
-
-    if(todayData.length < 2){
-      body.innerHTML = `<tr><td colspan="4">Недостаточно данных за день</td></tr>`;
-      return;
-    }
-
-    addRow("Сегодня", todayData[0], todayData[todayData.length - 1]);
+    addRow("Итого за день", dayData[0], dayData[dayData.length - 1]);
   }
 }
 
@@ -468,12 +477,6 @@ function resetZoomAll(){
   if(channelSubsChart) channelSubsChart.resetZoom();
   if(channelViewsChart) channelViewsChart.resetZoom();
   if(channelVideosChart) channelVideosChart.resetZoom();
-}
-
-function getPrevDay(d){
-  const date = new Date(d);
-  date.setDate(date.getDate() - 1);
-  return date.toISOString().slice(0,10);
 }
 
 document.getElementById("daySelect").addEventListener("change", renderAll);
