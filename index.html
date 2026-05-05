@@ -50,6 +50,15 @@ select, button {
 button {
   background: #2563eb;
   font-weight: bold;
+  cursor: pointer;
+}
+
+#avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+  display: none;
 }
 
 .chart-box {
@@ -86,6 +95,8 @@ canvas {
 </div>
 
 <div class="card">
+  <img id="avatar" src="" alt="Аватар канала">
+
   <select id="channelSelect"></select>
 
   <select id="typeSelect">
@@ -124,7 +135,7 @@ canvas {
 </div>
 
 <script>
-const API_BASE = "https://talkingfriendsru.qpqalzmnx96.workers.dev";
+const API_BASE = "https://talkingfriendsru.qpqazlmnx96.workers.dev";
 
 let chart;
 let statsData = null;
@@ -132,6 +143,7 @@ let historyData = [];
 
 const channelSelect = document.getElementById("channelSelect");
 const typeSelect = document.getElementById("typeSelect");
+const avatar = document.getElementById("avatar");
 
 function format(num) {
   return Number(num || 0).toLocaleString("ru-RU");
@@ -175,7 +187,7 @@ function fillChannels() {
   statsData.channels.forEach(channel => {
     const option = document.createElement("option");
     option.value = channel.id;
-    option.textContent = channel.title;
+    option.textContent = "👤 " + channel.title;
     channelSelect.appendChild(option);
   });
 
@@ -191,7 +203,8 @@ function getCurrentStats() {
       channels: statsData.total_channels,
       subscribers: statsData.total_subscribers,
       views: statsData.total_views,
-      videos: statsData.total_videos
+      videos: statsData.total_videos,
+      avatar: ""
     };
   }
 
@@ -202,7 +215,8 @@ function getCurrentStats() {
     channels: 1,
     subscribers: channel.subscribers,
     views: channel.views,
-    videos: channel.videos
+    videos: channel.videos,
+    avatar: channel.avatar
   };
 }
 
@@ -227,6 +241,13 @@ function render() {
   const current = getCurrentStats();
   const type = typeSelect.value;
   const channelId = channelSelect.value;
+
+  if (channelId === "all") {
+    avatar.style.display = "none";
+  } else {
+    avatar.src = current.avatar;
+    avatar.style.display = "inline-block";
+  }
 
   document.getElementById("channels").textContent = format(current.channels);
   document.getElementById("subs").textContent = format(current.subscribers);
