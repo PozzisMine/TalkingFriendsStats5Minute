@@ -10,79 +10,17 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #0f172a;
-  color: white;
-  margin: 0;
-  padding: 20px;
-}
-
-h1 {
-  text-align: center;
-}
-
-.card {
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 15px;
-  margin-bottom: 15px;
-  text-align: center;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 15px;
-}
-
-select, button {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  background: #020617;
-  color: white;
-  border: 1px solid #334155;
-  font-size: 16px;
-  margin-bottom: 10px;
-}
-
-button {
-  background: #2563eb;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-#avatar {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  margin-bottom: 12px;
-  display: none;
-}
-
-.chart-box {
-  height: 430px;
-}
-
-canvas {
-  background: #1e293b;
-  border-radius: 15px;
-}
-
-.error {
-  color: #f87171;
-}
-
-@media (max-width: 700px) {
-  body {
-    padding: 10px;
-  }
-
-  .chart-box {
-    height: 360px;
-  }
-}
+body { font-family: Arial, sans-serif; background:#0f172a; color:white; margin:0; padding:20px; }
+h1,h2 { text-align:center; }
+.card { background:#1e293b; padding:20px; border-radius:15px; margin-bottom:15px; text-align:center; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:15px; }
+select,button { width:100%; padding:12px; border-radius:10px; background:#020617; color:white; border:1px solid #334155; font-size:16px; margin-bottom:10px; }
+button { background:#2563eb; font-weight:bold; cursor:pointer; }
+#avatar { width:70px; height:70px; border-radius:50%; margin-bottom:12px; display:none; }
+.chart-box { height:360px; }
+canvas { background:#1e293b; border-radius:15px; }
+.error { color:#f87171; }
+@media (max-width:700px){ body{padding:10px;} .chart-box{height:320px;} }
 </style>
 </head>
 
@@ -96,10 +34,219 @@ canvas {
 
 <div class="card">
   <img id="avatar" src="" alt="Аватар канала">
-
   <select id="channelSelect"></select>
+  <button onclick="resetAllZoom()">Сбросить графики</button>
+</div>
 
-  <select id="typeSelect">
+<div class="grid">
+  <div class="card"><h3>Каналов</h3><div id="channels">0</div></div>
+  <div class="card"><h3>Подписчиков</h3><div id="subs">0</div></div>
+  <div class="card"><h3>Просмотров</h3><div id="views">0</div></div>
+  <div class="card"><h3>Видео</h3><div id="videos">0</div></div>
+</div>
+
+<div class="card chart-box">
+  <h2>Подписчики</h2>
+  <canvas id="subsChart"></canvas>
+</div>
+
+<div class="card chart-box">
+  <h2>Просмотры</h2>
+  <canvas id="viewsChart"></canvas>
+</div>
+
+<div class="card chart-box">
+  <h2>Видео</h2>
+  <canvas id="videosChart"></canvas>
+</div>
+
+<script>
+const API_BASE = "https://talkingfriendsru.qpqalzmnx96.workers.dev";
+
+let statsData = null;
+let historyData = [];
+let subsChart = null;
+let viewsChart = null;
+let videosChart = null;
+
+const channelSelect = document.getElementById("channelSelect");
+const avatar = document.getElementById("avatar");
+
+function format(num) {
+  return Number(num || 0).toLocaleString("ru-RU");
+}
+
+async function load() {
+  try {
+    const statsRes = await fetch(API_BASE + "/stats.json?time=" + Date.now());
+    const historyRes = await fetch(API_BASE + "/history.json?time=" + Date.now());
+
+    statsData = await statsRes.json();
+    historyData = await historyRes.json();
+
+    if (!statsData || !statsData.updated_at) {
+      throw new Error("stats.json пустой или не найден");
+    }
+
+    document.getElementById("updated").textContent =
+      "Обновлено: " + new Date(statsData.updated_at).toLocaleString("ru-RU");
+
+    fillChannels();
+    render();
+
+  } catch (error) {
+    document.getElementById("updated").innerHTML =
+      '<span class="error">Ошибка: ' + error.message + '</span>';
+    console.error(error);
+  }
+}
+
+function fillChannels() {
+  const oldValue = channelSelect.value || "all";
+  channelSelect.innerHTML = "";
+
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "Все каналы";
+  channelSelect.appendChild(allOption);
+
+  statsData.channels.forEach(channel => {
+    const option = document.createElement("option");
+    option.value = channel.id;
+    option.textContent = "👤 " + channel.title;
+    channelSelect.appendChild(option);
+  });
+
+  channelSelect.value = oldValue;
+}
+
+function getCurrentStats() {
+  const channelId = channelSelect.value;
+
+  if (channelId === "all") {
+    return {
+      title: "Все каналы",
+      channels: statsData.total_channels,
+      subscribers: statsData.total_subscribers,
+      views: statsData.total_views,
+      videos: statsData.total_videos,
+      avatar: ""
+    };
+  }
+
+  const channel = statsData.channels.find(ch => ch.id === channelId);
+
+  return {
+    title: channel.title,
+    channels: 1,
+    subscribers: channel.subscribers,
+    views: channel.views,
+    videos: channel.videos,
+    avatar: channel.avatar
+  };
+}
+
+function getHistoryValue(item, type, channelId) {
+  if (channelId === "all") {
+    if (type === "subscribers") return item.total_subscribers;
+    if (type === "views") return item.total_views;
+    if (type === "videos") return item.total_videos;
+  }
+
+  const channel = item.channels.find(ch => ch.id === channelId);
+  if (!channel) return null;
+
+  if (type === "subscribers") return channel.subscribers;
+  if (type === "views") return channel.views;
+  if (type === "videos") return channel.videos;
+
+  return null;
+}
+
+function makeChart(canvasId, oldChart, label, values) {
+  if (oldChart) oldChart.destroy();
+
+  const labels = historyData.map(item =>
+    new Date(item.updated_at).toLocaleString("ru-RU")
+  );
+
+  return new Chart(document.getElementById(canvasId), {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: label,
+        data: values,
+        tension: 0.25
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: "x"
+          },
+          zoom: {
+            wheel: {
+              enabled: true
+            },
+            pinch: {
+              enabled: true
+            },
+            mode: "x"
+          }
+        }
+      }
+    }
+  });
+}
+
+function render() {
+  const current = getCurrentStats();
+  const channelId = channelSelect.value;
+
+  if (channelId === "all") {
+    avatar.style.display = "none";
+  } else {
+    avatar.src = current.avatar;
+    avatar.style.display = "inline-block";
+  }
+
+  document.getElementById("channels").textContent = format(current.channels);
+  document.getElementById("subs").textContent = format(current.subscribers);
+  document.getElementById("views").textContent = format(current.views);
+  document.getElementById("videos").textContent = format(current.videos);
+
+  const subsValues = historyData.map(item => getHistoryValue(item, "subscribers", channelId));
+  const viewsValues = historyData.map(item => getHistoryValue(item, "views", channelId));
+  const videosValues = historyData.map(item => getHistoryValue(item, "videos", channelId));
+
+  subsChart = makeChart("subsChart", subsChart, current.title + " — Подписчики", subsValues);
+  viewsChart = makeChart("viewsChart", viewsChart, current.title + " — Просмотры", viewsValues);
+  videosChart = makeChart("videosChart", videosChart, current.title + " — Видео", videosValues);
+}
+
+function resetAllZoom() {
+  if (subsChart) subsChart.resetZoom();
+  if (viewsChart) viewsChart.resetZoom();
+  if (videosChart) videosChart.resetZoom();
+}
+
+channelSelect.addEventListener("change", render);
+
+load();
+setInterval(load, 60000);
+</script>
+
+</body>
+</html>  <select id="typeSelect">
     <option value="subscribers">Подписчики</option>
     <option value="views">Просмотры</option>
     <option value="videos">Видео</option>
