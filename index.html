@@ -10,340 +10,302 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
 <style>
-body{font-family:Arial,sans-serif;background:#0f172a;color:white;margin:0;padding:15px}
-h1,h2{text-align:center}
+body{font-family:Arial;background:#0f172a;color:white;padding:15px}
 .tabs{display:flex;gap:10px;margin-bottom:15px}
-.tab{flex:1;padding:12px;background:#1e293b;text-align:center;border-radius:10px;cursor:pointer;font-weight:bold}
+.tab{flex:1;padding:10px;background:#1e293b;text-align:center;border-radius:10px;cursor:pointer}
 .active{background:#2563eb}
 .card{background:#1e293b;padding:15px;border-radius:15px;margin-bottom:15px}
-select,button{width:100%;padding:12px;border-radius:10px;background:#020617;color:white;border:1px solid #334155;margin-bottom:10px;font-size:16px}
-button{background:#2563eb;font-weight:bold;cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-.stat{background:#020617;padding:15px;border-radius:12px;text-align:center}
-.stat h3{margin:0 0 8px;color:#94a3b8}
-.stat div{font-size:22px;font-weight:bold}
+select,button{width:100%;padding:10px;margin-bottom:10px;background:#020617;color:white;border-radius:10px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #334155}
 .up{color:#22c55e}
 .down{color:#ef4444}
 .same{color:#94a3b8}
-#avatar{width:70px;height:70px;border-radius:50%;display:none;margin:0 auto 10px}
-.error{color:#f87171;font-weight:bold}
 </style>
 </head>
 
 <body>
 
-<h1>Аналитика каналов</h1>
+<h2>Аналитика</h2>
 
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('overview', this)">Общий</div>
-  <div class="tab" onclick="switchTab('channels', this)">Каналы</div>
-</div>
-
-<div class="card">
-  <div id="status">Загрузка...</div>
+<div class="tab active" onclick="switchTab('overview',this)">Общий</div>
+<div class="tab" onclick="switchTab('channels',this)">Каналы</div>
+<div class="tab" onclick="switchTab('changed',this)">Изменения</div>
 </div>
 
 <div id="overview">
-  <div class="card">
-    <select id="daySelect"></select>
 
-    <select id="timeMode">
-      <option value="utc">UTC</option>
-      <option value="local">Моё время</option>
-    </select>
+<div class="card">
+<select id="daySelect"></select>
 
-    <button onclick="resetZoomAll()">Сбросить масштаб графиков</button>
-  </div>
+<select id="timeMode">
+<option value="utc">UTC</option>
+<option value="local">Моё время</option>
+</select>
 
-  <div class="grid">
-    <div class="stat"><h3>Каналов</h3><div id="totalChannels">0</div></div>
-    <div class="stat"><h3>Подписчиков</h3><div id="totalSubs">0</div><span id="totalSubsDiff" class="same">—</span></div>
-    <div class="stat"><h3>Просмотров</h3><div id="totalViews">0</div><span id="totalViewsDiff" class="same">—</span></div>
-    <div class="stat"><h3>Видео</h3><div id="totalVideos">0</div><span id="totalVideosDiff" class="same">—</span></div>
-  </div>
-
-  <div class="card"><h2>Подписчики за день</h2><canvas id="subsChart"></canvas></div>
-  <div class="card"><h2>Просмотры за день</h2><canvas id="viewsChart"></canvas></div>
-  <div class="card"><h2>Видео за день</h2><canvas id="videosChart"></canvas></div>
+<button onclick="resetZoomAll()">Сброс графика</button>
 </div>
 
-<div id="channels" style="display:none;">
-  <div class="card">
-    <img id="avatar" src="" alt="Аватар">
+<div class="card">
+<h3>Таблица изменений</h3>
 
-    <select id="sortChannels">
-      <option value="name_asc">А → Я ↑</option>
-      <option value="name_desc">Я → А ↓</option>
-      <option value="subs_desc">Подписчики ↓ больше → меньше</option>
-      <option value="subs_asc">Подписчики ↑ меньше → больше</option>
-      <option value="views_desc">Просмотры ↓ больше → меньше</option>
-      <option value="views_asc">Просмотры ↑ меньше → больше</option>
-      <option value="videos_desc">Видео ↓ больше → меньше</option>
-      <option value="videos_asc">Видео ↑ меньше → больше</option>
-    </select>
+<table>
+<thead>
+<tr>
+<th>Период</th>
+<th>Подписчики</th>
+<th>Просмотры</th>
+<th>Видео</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
 
-    <select id="channelSelect"></select>
-    <button onclick="resetZoomAll()">Сбросить масштаб графиков</button>
-  </div>
+<div class="card"><canvas id="subsChart"></canvas></div>
 
-  <div class="grid">
-    <div class="stat"><h3>Подписчиков</h3><div id="channelSubs">0</div><span id="channelSubsDiff" class="same">—</span></div>
-    <div class="stat"><h3>Просмотров</h3><div id="channelViews">0</div><span id="channelViewsDiff" class="same">—</span></div>
-    <div class="stat"><h3>Видео</h3><div id="channelVideos">0</div><span id="channelVideosDiff" class="same">—</span></div>
-  </div>
+</div>
 
-  <div class="card"><h2>Подписчики выбранного канала</h2><canvas id="channelSubsChart"></canvas></div>
-  <div class="card"><h2>Просмотры выбранного канала</h2><canvas id="channelViewsChart"></canvas></div>
-  <div class="card"><h2>Видео выбранного канала</h2><canvas id="channelVideosChart"></canvas></div>
+<div id="channels" style="display:none">
+
+<div class="card">
+<select id="sortChannels">
+<option value="subs_desc">Подписчики ↓</option>
+<option value="subs_asc">Подписчики ↑</option>
+<option value="views_desc">Просмотры ↓</option>
+<option value="views_asc">Просмотры ↑</option>
+<option value="videos_desc">Видео ↓</option>
+<option value="videos_asc">Видео ↑</option>
+<option value="name_asc">А → Я</option>
+<option value="name_desc">Я → А</option>
+</select>
+
+<select id="channelSelect"></select>
+</div>
+
+<div class="card"><canvas id="channelChart"></canvas></div>
+
+</div>
+
+<div id="changed" style="display:none">
+
+<div class="card">
+<h3>Кто изменился</h3>
+
+<table>
+<thead>
+<tr>
+<th>Канал</th>
+<th>Подписчики</th>
+<th>Просмотры</th>
+<th>Видео</th>
+</tr>
+</thead>
+
+<tbody id="changedChannels"></tbody>
+</table>
+
+</div>
+
 </div>
 
 <script>
-const API = "https://talkingfriendsru.qpqalzmnx96.workers.dev";
+const API="https://talkingfriendsru.qpqalzmnx96.workers.dev/";
 
-let history = [];
-let timeMode = "utc";
+let history=[],timeMode="utc",subsChart,channelChart;
 
-let subsChart, viewsChart, videosChart;
-let channelSubsChart, channelViewsChart, channelVideosChart;
+function format(n){return Number(n||0).toLocaleString("ru-RU")}
 
-function format(num){
-  return Number(num || 0).toLocaleString("ru-RU");
+function diff(now,old){
+const d=now-old;
+if(d>0)return `<span class="up">▲ +${format(d)}</span>`;
+if(d<0)return `<span class="down">▼ ${format(d)}</span>`;
+return `<span class="same">— 0</span>`;
 }
 
-function formatTime(dateStr){
-  const date = new Date(dateStr);
-
-  if(timeMode === "utc"){
-    return date.toLocaleTimeString("ru-RU", {
-      timeZone: "UTC",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit"
-    }) + " UTC";
-  }
-
-  return date.toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
+function time(t){
+const d=new Date(t);
+if(timeMode==="utc")return d.toLocaleTimeString("ru-RU",{timeZone:"UTC"})+" UTC";
+return d.toLocaleTimeString("ru-RU");
 }
 
-function diffText(now, old){
-  const diff = Number(now || 0) - Number(old || 0);
-  if(diff > 0) return `<span class="up">▲ +${format(diff)}</span>`;
-  if(diff < 0) return `<span class="down">▼ ${format(diff)}</span>`;
-  return `<span class="same">— 0</span>`;
-}
+function switchTab(id,el){
+document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+el.classList.add("active");
 
-function switchTab(tab, el){
-  document.getElementById("overview").style.display = tab === "overview" ? "block" : "none";
-  document.getElementById("channels").style.display = tab === "channels" ? "block" : "none";
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  el.classList.add("active");
+["overview","channels","changed"].forEach(i=>{
+document.getElementById(i).style.display=(i===id?"block":"none");
+});
 }
 
 async function load(){
-  try{
-    const res = await fetch(API + "/history.json?time=" + Date.now());
-    history = await res.json();
+const res=await fetch(API+"/history.json?"+Date.now());
+history=await res.json();
 
-    if(!Array.isArray(history) || history.length === 0){
-      throw new Error("history.json пустой");
-    }
-
-    fillDays();
-    fillChannels();
-    renderOverview();
-    renderChannel();
-
-    document.getElementById("status").textContent =
-      "Записей в истории: " + format(history.length);
-
-  }catch(e){
-    document.getElementById("status").innerHTML =
-      `<span class="error">Ошибка: ${e.message}</span>`;
-  }
+fillDays();
+fillChannels();
+render();
+renderChanged();
 }
 
 function fillDays(){
-  const select = document.getElementById("daySelect");
-  const old = select.value;
-
-  const days = [...new Set(history.map(i => i.updated_at.slice(0, 10)))].reverse();
-
-  select.innerHTML = "";
-  days.forEach(day => {
-    const opt = document.createElement("option");
-    opt.value = day;
-    opt.textContent = day + " UTC";
-    select.appendChild(opt);
-  });
-
-  select.value = days.includes(old) ? old : days[0];
+const s=document.getElementById("daySelect");
+const days=[...new Set(history.map(i=>i.updated_at.slice(0,10)))].reverse();
+s.innerHTML="";
+days.forEach(d=>{
+const o=document.createElement("option");
+o.value=d;o.textContent=d+" UTC";
+s.appendChild(o);
+});
 }
 
 function fillChannels(){
-  const select = document.getElementById("channelSelect");
-  const old = select.value;
-  const sort = document.getElementById("sortChannels").value;
+const last=history.at(-1);
+let ch=[...last.channels];
 
-  const last = history[history.length - 1];
-  let channels = [...last.channels];
+const sort=document.getElementById("sortChannels").value;
 
-  switch(sort){
-    case "name_asc": channels.sort((a,b)=>a.title.localeCompare(b.title)); break;
-    case "name_desc": channels.sort((a,b)=>b.title.localeCompare(a.title)); break;
-    case "subs_desc": channels.sort((a,b)=>b.subscribers-a.subscribers); break;
-    case "subs_asc": channels.sort((a,b)=>a.subscribers-b.subscribers); break;
-    case "views_desc": channels.sort((a,b)=>b.views-a.views); break;
-    case "views_asc": channels.sort((a,b)=>a.views-b.views); break;
-    case "videos_desc": channels.sort((a,b)=>b.videos-a.videos); break;
-    case "videos_asc": channels.sort((a,b)=>a.videos-b.videos); break;
-  }
+ch.sort((a,b)=>{
+if(sort==="subs_desc")return b.subscribers-a.subscribers;
+if(sort==="subs_asc")return a.subscribers-b.subscribers;
+if(sort==="views_desc")return b.views-a.views;
+if(sort==="views_asc")return a.views-b.views;
+if(sort==="videos_desc")return b.videos-a.videos;
+if(sort==="videos_asc")return a.videos-b.videos;
+if(sort==="name_asc")return a.title.localeCompare(b.title);
+if(sort==="name_desc")return b.title.localeCompare(a.title);
+});
 
-  select.innerHTML = "";
-
-  channels.forEach(ch => {
-    const opt = document.createElement("option");
-    opt.value = ch.id;
-    opt.textContent = ch.title;
-    select.appendChild(opt);
-  });
-
-  const exists = [...select.options].some(o => o.value === old);
-  select.value = exists ? old : channels[0]?.id;
+const s=document.getElementById("channelSelect");
+s.innerHTML="";
+ch.forEach(c=>{
+const o=document.createElement("option");
+o.value=c.id;o.textContent=c.title;
+s.appendChild(o);
+});
 }
 
-function getDayData(){
-  const day = document.getElementById("daySelect").value;
-  return history.filter(i => i.updated_at.startsWith(day));
+function render(){
+renderTable();
+renderChart();
+renderChannel();
 }
 
-function renderOverview(){
-  const data = getDayData();
-  if(data.length === 0) return;
+function renderTable(){
+const body=document.getElementById("tableBody");
+body.innerHTML="";
 
-  const first = data[0];
-  const last = data[data.length - 1];
+const last=history.at(-1);
+const prev=history.at(-2);
 
-  document.getElementById("totalChannels").textContent = format(last.total_channels);
-  document.getElementById("totalSubs").textContent = format(last.total_subscribers);
-  document.getElementById("totalViews").textContent = format(last.total_views);
-  document.getElementById("totalVideos").textContent = format(last.total_videos);
+addRow("За минуту",prev,last);
 
-  document.getElementById("totalSubsDiff").innerHTML = diffText(last.total_subscribers, first.total_subscribers);
-  document.getElementById("totalViewsDiff").innerHTML = diffText(last.total_views, first.total_views);
-  document.getElementById("totalVideosDiff").innerHTML = diffText(last.total_videos, first.total_videos);
+const today=last.updated_at.slice(0,10);
+const t=history.filter(i=>i.updated_at.startsWith(today));
+if(t.length>1)addRow("Сегодня",t[0],t.at(-1));
 
-  const labels = data.map(i => formatTime(i.updated_at));
-
-  subsChart = drawChart("subsChart", subsChart, labels, data.map(i => i.total_subscribers), "Подписчики");
-  viewsChart = drawChart("viewsChart", viewsChart, labels, data.map(i => i.total_views), "Просмотры");
-  videosChart = drawChart("videosChart", videosChart, labels, data.map(i => i.total_videos), "Видео");
+const y=getPrevDay(today);
+const yData=history.filter(i=>i.updated_at.startsWith(y));
+if(yData.length>1)addRow("Вчера",yData[0],yData.at(-1));
 }
 
-function getChannelFromItem(item, id){
-  return item.channels.find(c => c.id === id);
+function addRow(name,a,b){
+const tr=document.createElement("tr");
+tr.innerHTML=`
+<td>${name}</td>
+<td>${diff(b.total_subscribers,a.total_subscribers)}</td>
+<td>${diff(b.total_views,a.total_views)}</td>
+<td>${diff(b.total_videos,a.total_videos)}</td>`;
+document.getElementById("tableBody").appendChild(tr);
+}
+
+function renderChanged(){
+const tbody=document.getElementById("changedChannels");
+tbody.innerHTML="";
+
+const last=history.at(-1);
+const prev=history.at(-2);
+
+last.channels.forEach(n=>{
+const o=prev.channels.find(c=>c.id===n.id);
+if(!o)return;
+
+const s=n.subscribers-o.subscribers;
+const v=n.views-o.views;
+const vid=n.videos-o.videos;
+
+if(s===0&&v===0&&vid===0)return;
+
+const tr=document.createElement("tr");
+tr.innerHTML=`
+<td>${n.title}</td>
+<td>${diff(n.subscribers,o.subscribers)}</td>
+<td>${diff(n.views,o.views)}</td>
+<td>${diff(n.videos,o.videos)}</td>`;
+tbody.appendChild(tr);
+});
+}
+
+function renderChart(){
+const day=document.getElementById("daySelect").value;
+const d=history.filter(i=>i.updated_at.startsWith(day));
+
+const labels=d.map(i=>time(i.updated_at));
+const data=d.map(i=>i.total_subscribers);
+
+if(subsChart)subsChart.destroy();
+
+subsChart=new Chart(document.getElementById("subsChart"),{
+type:"line",
+data:{labels,datasets:[{data,borderColor:"#60a5fa"}]},
+options:{
+plugins:{
+zoom:{
+pan:{enabled:true,mode:"x"},
+zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:"x"}
+}
+}
+}
+});
 }
 
 function renderChannel(){
-  const id = document.getElementById("channelSelect").value;
-  if(!id) return;
+const id=document.getElementById("channelSelect").value;
+if(!id)return;
 
-  const dayData = getDayData();
-  if(dayData.length === 0) return;
+const labels=history.map(i=>time(i.updated_at));
+const data=history.map(i=>{
+const c=i.channels.find(x=>x.id===id);
+return c?c.subscribers:null;
+});
 
-  const lastAll = history[history.length - 1];
-  const current = getChannelFromItem(lastAll, id);
-  if(!current) return;
+if(channelChart)channelChart.destroy();
 
-  const avatar = document.getElementById("avatar");
-  avatar.src = current.avatar || "";
-  avatar.style.display = current.avatar ? "block" : "none";
-
-  const firstToday = getChannelFromItem(dayData[0], id) || current;
-  const lastToday = getChannelFromItem(dayData[dayData.length - 1], id) || current;
-
-  document.getElementById("channelSubs").textContent = format(current.subscribers);
-  document.getElementById("channelViews").textContent = format(current.views);
-  document.getElementById("channelVideos").textContent = format(current.videos);
-
-  document.getElementById("channelSubsDiff").innerHTML = diffText(lastToday.subscribers, firstToday.subscribers);
-  document.getElementById("channelViewsDiff").innerHTML = diffText(lastToday.views, firstToday.views);
-  document.getElementById("channelVideosDiff").innerHTML = diffText(lastToday.videos, firstToday.videos);
-
-  const labels = dayData.map(i => formatTime(i.updated_at));
-  const channelData = dayData.map(i => getChannelFromItem(i, id) || {});
-
-  channelSubsChart = drawChart("channelSubsChart", channelSubsChart, labels, channelData.map(c => c.subscribers || null), "Подписчики");
-  channelViewsChart = drawChart("channelViewsChart", channelViewsChart, labels, channelData.map(c => c.views || null), "Просмотры");
-  channelVideosChart = drawChart("channelVideosChart", channelVideosChart, labels, channelData.map(c => c.videos || null), "Видео");
+channelChart=new Chart(document.getElementById("channelChart"),{
+type:"line",
+data:{labels,datasets:[{data,borderColor:"#22c55e"}]}
+});
 }
 
-function drawChart(id, oldChart, labels, data, label){
-  if(oldChart) oldChart.destroy();
-
-  return new Chart(document.getElementById(id), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label,
-        data,
-        borderColor: "#60a5fa",
-        tension: 0.25
-      }]
-    },
-    options: {
-      responsive: true,
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      plugins: {
-        zoom: {
-          pan: { enabled: true, mode: "x" },
-          zoom: {
-            wheel: { enabled: true },
-            pinch: { enabled: true },
-            mode: "x"
-          }
-        }
-      }
-    }
-  });
+function getPrevDay(d){
+const date=new Date(d);
+date.setDate(date.getDate()-1);
+return date.toISOString().slice(0,10);
 }
 
 function resetZoomAll(){
-  if(subsChart) subsChart.resetZoom();
-  if(viewsChart) viewsChart.resetZoom();
-  if(videosChart) videosChart.resetZoom();
-  if(channelSubsChart) channelSubsChart.resetZoom();
-  if(channelViewsChart) channelViewsChart.resetZoom();
-  if(channelVideosChart) channelVideosChart.resetZoom();
+if(subsChart)subsChart.resetZoom();
+if(channelChart)channelChart.resetZoom();
 }
 
-document.getElementById("daySelect").addEventListener("change", () => {
-  renderOverview();
-  renderChannel();
-});
-
-document.getElementById("timeMode").addEventListener("change", e => {
-  timeMode = e.target.value;
-  renderOverview();
-  renderChannel();
-});
-
-document.getElementById("channelSelect").addEventListener("change", renderChannel);
-
-document.getElementById("sortChannels").addEventListener("change", () => {
-  fillChannels();
-  renderChannel();
-});
+document.getElementById("daySelect").addEventListener("change",render);
+document.getElementById("timeMode").addEventListener("change",e=>{timeMode=e.target.value;render();});
+document.getElementById("channelSelect").addEventListener("change",renderChannel);
+document.getElementById("sortChannels").addEventListener("change",()=>{fillChannels();renderChannel();});
 
 load();
-setInterval(load, 60000);
+setInterval(load,60000);
 </script>
 
 </body>
