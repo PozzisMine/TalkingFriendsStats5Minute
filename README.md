@@ -1,1 +1,0 @@
-# TalkingFriendsStats5Minute
