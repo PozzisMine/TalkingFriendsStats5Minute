@@ -1,60 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube статистика</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+  margin: 0;
+  padding: 20px;
+}
+h1 { text-align: center; }
+.card {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+}
+canvas {
+  background: #1e293b;
+  border-radius: 15px;
+  padding: 10px;
+}
+.error { color: #f87171; }
+</style>
+</head>
+
+<body>
+
+<h1>YouTube статистика</h1>
+
+<div class="card">
+  <div id="updated">Загрузка...</div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h3>Каналов</h3>
+    <div id="channels">0</div>
+  </div>
+  <div class="card">
+    <h3>Подписчиков</h3>
+    <div id="subs">0</div>
+  </div>
+  <div class="card">
+    <h3>Просмотров</h3>
+    <div id="views">0</div>
+  </div>
+  <div class="card">
+    <h3>Видео</h3>
+    <div id="videos">0</div>
+  </div>
+</div>
+
+<div class="card">
+  <canvas id="chart"></canvas>
+</div>
+
 <script>
 const API_BASE = "https://talkingfriendsru.qpqazlmnx96.workers.dev";
 
 let chart;
 
-function format(n){
+function format(n) {
   return Number(n || 0).toLocaleString("ru-RU");
 }
 
-async function load(){
+async function load() {
   try {
-    const statsRes = await fetch(API_BASE + "/stats.json");
-    const historyRes = await fetch(API_BASE + "/history.json");
+    const statsRes = await fetch(API_BASE + "/stats.json?time=" + Date.now());
+    const historyRes = await fetch(API_BASE + "/history.json?time=" + Date.now());
 
     const stats = await statsRes.json();
     const history = await historyRes.json();
 
     if (!stats || !stats.updated_at) {
-      throw new Error("Нет данных stats.json");
+      throw new Error("stats.json пустой или не найден");
     }
-
-    document.getElementById("subs").textContent = format(stats.total_subscribers);
-    document.getElementById("views").textContent = format(stats.total_views);
-    document.getElementById("videos").textContent = format(stats.total_videos);
 
     document.getElementById("updated").textContent =
       "Обновлено: " + new Date(stats.updated_at).toLocaleString("ru-RU");
 
-    // если история пустая — не ломаем сайт
-    if (!Array.isArray(history) || history.length === 0) {
-      console.log("История пока пустая");
-      return;
+    document.getElementById("channels").textContent = format(stats.total_channels);
+    document.getElementById("subs").textContent = format(stats.total_subscribers);
+    document.getElementById("views").textContent = format(stats.total_views);
+    document.getElementById("videos").textContent = format(stats.total_videos);
+
+    if (Array.isArray(history) && history.length > 0) {
+      const labels = history.map(x => new Date(x.updated_at).toLocaleTimeString("ru-RU"));
+      const data = history.map(x => x.total_subscribers || 0);
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(document.getElementById("chart"), {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Подписчики",
+            data: data,
+            tension: 0.25
+          }]
+        }
+      });
     }
 
-    const labels = history.map(x =>
-      new Date(x.updated_at).toLocaleTimeString("ru-RU")
-    );
-
-    const data = history.map(x => x.total_subscribers || 0);
-
-    if (chart) chart.destroy();
-
-    chart = new Chart(document.getElementById("chart"), {
-      type: "line",
-      data: {
-        labels,
-        datasets: [{
-          label: "Подписчики",
-          data,
-          tension: 0.25
-        }]
-      }
-    });
-
   } catch (e) {
-    document.getElementById("updated").textContent =
-      "Ошибка: " + e.message;
+    document.getElementById("updated").innerHTML =
+      '<span class="error">Ошибка: ' + e.message + '</span>';
     console.error(e);
   }
 }
@@ -62,3 +125,6 @@ async function load(){
 load();
 setInterval(load, 60000);
 </script>
+
+</body>
+</html>
