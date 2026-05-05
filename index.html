@@ -10,107 +10,23 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #0f172a;
-  color: white;
-  margin: 0;
-  padding: 15px;
-}
-
-h1, h2 {
-  text-align: center;
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.tab {
-  flex: 1;
-  padding: 12px;
-  background: #1e293b;
-  text-align: center;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.active {
-  background: #2563eb;
-}
-
-.card {
-  background: #1e293b;
-  padding: 15px;
-  border-radius: 15px;
-  margin-bottom: 15px;
-}
-
-select {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  background: #020617;
-  color: white;
-  border: 1px solid #334155;
-  margin-bottom: 10px;
-  font-size: 16px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-}
-
-.stat {
-  background: #020617;
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.stat h3 {
-  margin: 0 0 8px;
-  color: #94a3b8;
-}
-
-.stat div {
-  font-size: 22px;
-  font-weight: bold;
-}
-
-.up {
-  color: #22c55e;
-}
-
-.down {
-  color: #ef4444;
-}
-
-.same {
-  color: #94a3b8;
-}
-
-#avatar {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  display: none;
-  margin: 0 auto 10px;
-}
-
-canvas {
-  margin-top: 10px;
-}
-
-.error {
-  color: #f87171;
-  font-weight: bold;
-}
+body{font-family:Arial,sans-serif;background:#0f172a;color:white;margin:0;padding:15px}
+h1,h2{text-align:center}
+.tabs{display:flex;gap:10px;margin-bottom:15px}
+.tab{flex:1;padding:12px;background:#1e293b;text-align:center;border-radius:10px;cursor:pointer;font-weight:bold}
+.active{background:#2563eb}
+.card{background:#1e293b;padding:15px;border-radius:15px;margin-bottom:15px}
+select,button{width:100%;padding:12px;border-radius:10px;background:#020617;color:white;border:1px solid #334155;margin-bottom:10px;font-size:16px}
+button{background:#2563eb;font-weight:bold;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.stat{background:#020617;padding:15px;border-radius:12px;text-align:center}
+.stat h3{margin:0 0 8px;color:#94a3b8}
+.stat div{font-size:22px;font-weight:bold}
+.up{color:#22c55e}
+.down{color:#ef4444}
+.same{color:#94a3b8}
+#avatar{width:70px;height:70px;border-radius:50%;display:none;margin:0 auto 10px}
+.error{color:#f87171;font-weight:bold}
 </style>
 </head>
 
@@ -130,44 +46,25 @@ canvas {
 <div id="overview">
   <div class="card">
     <select id="daySelect"></select>
+
+    <select id="timeMode">
+      <option value="utc">UTC</option>
+      <option value="local">Моё время</option>
+    </select>
+
+    <button onclick="resetZoomAll()">Сбросить масштаб графиков</button>
   </div>
 
   <div class="grid">
-    <div class="stat">
-      <h3>Каналов</h3>
-      <div id="totalChannels">0</div>
-    </div>
-    <div class="stat">
-      <h3>Подписчиков</h3>
-      <div id="totalSubs">0</div>
-      <span id="totalSubsDiff" class="same">—</span>
-    </div>
-    <div class="stat">
-      <h3>Просмотров</h3>
-      <div id="totalViews">0</div>
-      <span id="totalViewsDiff" class="same">—</span>
-    </div>
-    <div class="stat">
-      <h3>Видео</h3>
-      <div id="totalVideos">0</div>
-      <span id="totalVideosDiff" class="same">—</span>
-    </div>
+    <div class="stat"><h3>Каналов</h3><div id="totalChannels">0</div></div>
+    <div class="stat"><h3>Подписчиков</h3><div id="totalSubs">0</div><span id="totalSubsDiff" class="same">—</span></div>
+    <div class="stat"><h3>Просмотров</h3><div id="totalViews">0</div><span id="totalViewsDiff" class="same">—</span></div>
+    <div class="stat"><h3>Видео</h3><div id="totalVideos">0</div><span id="totalVideosDiff" class="same">—</span></div>
   </div>
 
-  <div class="card">
-    <h2>Подписчики за день</h2>
-    <canvas id="subsChart"></canvas>
-  </div>
-
-  <div class="card">
-    <h2>Просмотры за день</h2>
-    <canvas id="viewsChart"></canvas>
-  </div>
-
-  <div class="card">
-    <h2>Видео за день</h2>
-    <canvas id="videosChart"></canvas>
-  </div>
+  <div class="card"><h2>Подписчики за день</h2><canvas id="subsChart"></canvas></div>
+  <div class="card"><h2>Просмотры за день</h2><canvas id="viewsChart"></canvas></div>
+  <div class="card"><h2>Видео за день</h2><canvas id="videosChart"></canvas></div>
 </div>
 
 <div id="channels" style="display:none;">
@@ -186,75 +83,72 @@ canvas {
     </select>
 
     <select id="channelSelect"></select>
+    <button onclick="resetZoomAll()">Сбросить масштаб графиков</button>
   </div>
 
   <div class="grid">
-    <div class="stat">
-      <h3>Подписчиков</h3>
-      <div id="channelSubs">0</div>
-      <span id="channelSubsDiff" class="same">—</span>
-    </div>
-    <div class="stat">
-      <h3>Просмотров</h3>
-      <div id="channelViews">0</div>
-      <span id="channelViewsDiff" class="same">—</span>
-    </div>
-    <div class="stat">
-      <h3>Видео</h3>
-      <div id="channelVideos">0</div>
-      <span id="channelVideosDiff" class="same">—</span>
-    </div>
+    <div class="stat"><h3>Подписчиков</h3><div id="channelSubs">0</div><span id="channelSubsDiff" class="same">—</span></div>
+    <div class="stat"><h3>Просмотров</h3><div id="channelViews">0</div><span id="channelViewsDiff" class="same">—</span></div>
+    <div class="stat"><h3>Видео</h3><div id="channelVideos">0</div><span id="channelVideosDiff" class="same">—</span></div>
   </div>
 
-  <div class="card">
-    <h2>Подписчики выбранного канала</h2>
-    <canvas id="channelSubsChart"></canvas>
-  </div>
-
-  <div class="card">
-    <h2>Просмотры выбранного канала</h2>
-    <canvas id="channelViewsChart"></canvas>
-  </div>
-
-  <div class="card">
-    <h2>Видео выбранного канала</h2>
-    <canvas id="channelVideosChart"></canvas>
-  </div>
+  <div class="card"><h2>Подписчики выбранного канала</h2><canvas id="channelSubsChart"></canvas></div>
+  <div class="card"><h2>Просмотры выбранного канала</h2><canvas id="channelViewsChart"></canvas></div>
+  <div class="card"><h2>Видео выбранного канала</h2><canvas id="channelVideosChart"></canvas></div>
 </div>
 
 <script>
 const API = "https://talkingfriendsru.qpqalzmnx96.workers.dev";
 
 let history = [];
+let timeMode = "utc";
+
 let subsChart, viewsChart, videosChart;
 let channelSubsChart, channelViewsChart, channelVideosChart;
 
-function format(num) {
+function format(num){
   return Number(num || 0).toLocaleString("ru-RU");
 }
 
-function diffText(now, old) {
-  const diff = Number(now || 0) - Number(old || 0);
+function formatTime(dateStr){
+  const date = new Date(dateStr);
 
-  if (diff > 0) return `<span class="up">▲ +${format(diff)}</span>`;
-  if (diff < 0) return `<span class="down">▼ ${format(diff)}</span>`;
+  if(timeMode === "utc"){
+    return date.toLocaleTimeString("ru-RU", {
+      timeZone: "UTC",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    }) + " UTC";
+  }
+
+  return date.toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
+
+function diffText(now, old){
+  const diff = Number(now || 0) - Number(old || 0);
+  if(diff > 0) return `<span class="up">▲ +${format(diff)}</span>`;
+  if(diff < 0) return `<span class="down">▼ ${format(diff)}</span>`;
   return `<span class="same">— 0</span>`;
 }
 
-function switchTab(tab, el) {
+function switchTab(tab, el){
   document.getElementById("overview").style.display = tab === "overview" ? "block" : "none";
   document.getElementById("channels").style.display = tab === "channels" ? "block" : "none";
-
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
 }
 
-async function load() {
-  try {
+async function load(){
+  try{
     const res = await fetch(API + "/history.json?time=" + Date.now());
     history = await res.json();
 
-    if (!Array.isArray(history) || history.length === 0) {
+    if(!Array.isArray(history) || history.length === 0){
       throw new Error("history.json пустой");
     }
 
@@ -266,31 +160,30 @@ async function load() {
     document.getElementById("status").textContent =
       "Записей в истории: " + format(history.length);
 
-  } catch (e) {
+  }catch(e){
     document.getElementById("status").innerHTML =
       `<span class="error">Ошибка: ${e.message}</span>`;
   }
 }
 
-function fillDays() {
+function fillDays(){
   const select = document.getElementById("daySelect");
   const old = select.value;
 
   const days = [...new Set(history.map(i => i.updated_at.slice(0, 10)))].reverse();
 
   select.innerHTML = "";
-
   days.forEach(day => {
     const opt = document.createElement("option");
     opt.value = day;
-    opt.textContent = day;
+    opt.textContent = day + " UTC";
     select.appendChild(opt);
   });
 
   select.value = days.includes(old) ? old : days[0];
 }
 
-function fillChannels() {
+function fillChannels(){
   const select = document.getElementById("channelSelect");
   const old = select.value;
   const sort = document.getElementById("sortChannels").value;
@@ -298,31 +191,15 @@ function fillChannels() {
   const last = history[history.length - 1];
   let channels = [...last.channels];
 
-  switch (sort) {
-    case "name_asc":
-      channels.sort((a, b) => a.title.localeCompare(b.title));
-      break;
-    case "name_desc":
-      channels.sort((a, b) => b.title.localeCompare(a.title));
-      break;
-    case "subs_desc":
-      channels.sort((a, b) => b.subscribers - a.subscribers);
-      break;
-    case "subs_asc":
-      channels.sort((a, b) => a.subscribers - b.subscribers);
-      break;
-    case "views_desc":
-      channels.sort((a, b) => b.views - a.views);
-      break;
-    case "views_asc":
-      channels.sort((a, b) => a.views - b.views);
-      break;
-    case "videos_desc":
-      channels.sort((a, b) => b.videos - a.videos);
-      break;
-    case "videos_asc":
-      channels.sort((a, b) => a.videos - b.videos);
-      break;
+  switch(sort){
+    case "name_asc": channels.sort((a,b)=>a.title.localeCompare(b.title)); break;
+    case "name_desc": channels.sort((a,b)=>b.title.localeCompare(a.title)); break;
+    case "subs_desc": channels.sort((a,b)=>b.subscribers-a.subscribers); break;
+    case "subs_asc": channels.sort((a,b)=>a.subscribers-b.subscribers); break;
+    case "views_desc": channels.sort((a,b)=>b.views-a.views); break;
+    case "views_asc": channels.sort((a,b)=>a.views-b.views); break;
+    case "videos_desc": channels.sort((a,b)=>b.videos-a.videos); break;
+    case "videos_asc": channels.sort((a,b)=>a.videos-b.videos); break;
   }
 
   select.innerHTML = "";
@@ -338,15 +215,14 @@ function fillChannels() {
   select.value = exists ? old : channels[0]?.id;
 }
 
-function getDayData() {
+function getDayData(){
   const day = document.getElementById("daySelect").value;
   return history.filter(i => i.updated_at.startsWith(day));
 }
 
-function renderOverview() {
+function renderOverview(){
   const data = getDayData();
-
-  if (data.length === 0) return;
+  if(data.length === 0) return;
 
   const first = data[0];
   const last = data[data.length - 1];
@@ -356,33 +232,31 @@ function renderOverview() {
   document.getElementById("totalViews").textContent = format(last.total_views);
   document.getElementById("totalVideos").textContent = format(last.total_videos);
 
-  document.getElementById("totalSubsDiff").innerHTML =
-    diffText(last.total_subscribers, first.total_subscribers);
-  document.getElementById("totalViewsDiff").innerHTML =
-    diffText(last.total_views, first.total_views);
-  document.getElementById("totalVideosDiff").innerHTML =
-    diffText(last.total_videos, first.total_videos);
+  document.getElementById("totalSubsDiff").innerHTML = diffText(last.total_subscribers, first.total_subscribers);
+  document.getElementById("totalViewsDiff").innerHTML = diffText(last.total_views, first.total_views);
+  document.getElementById("totalVideosDiff").innerHTML = diffText(last.total_videos, first.total_videos);
 
-  const labels = data.map(i => new Date(i.updated_at).toLocaleTimeString("ru-RU"));
+  const labels = data.map(i => formatTime(i.updated_at));
 
   subsChart = drawChart("subsChart", subsChart, labels, data.map(i => i.total_subscribers), "Подписчики");
   viewsChart = drawChart("viewsChart", viewsChart, labels, data.map(i => i.total_views), "Просмотры");
   videosChart = drawChart("videosChart", videosChart, labels, data.map(i => i.total_videos), "Видео");
 }
 
-function getChannelFromItem(item, id) {
+function getChannelFromItem(item, id){
   return item.channels.find(c => c.id === id);
 }
 
-function renderChannel() {
+function renderChannel(){
   const id = document.getElementById("channelSelect").value;
-  if (!id) return;
+  if(!id) return;
 
   const dayData = getDayData();
+  if(dayData.length === 0) return;
+
   const lastAll = history[history.length - 1];
   const current = getChannelFromItem(lastAll, id);
-
-  if (!current) return;
+  if(!current) return;
 
   const avatar = document.getElementById("avatar");
   avatar.src = current.avatar || "";
@@ -395,43 +269,20 @@ function renderChannel() {
   document.getElementById("channelViews").textContent = format(current.views);
   document.getElementById("channelVideos").textContent = format(current.videos);
 
-  document.getElementById("channelSubsDiff").innerHTML =
-    diffText(lastToday.subscribers, firstToday.subscribers);
-  document.getElementById("channelViewsDiff").innerHTML =
-    diffText(lastToday.views, firstToday.views);
-  document.getElementById("channelVideosDiff").innerHTML =
-    diffText(lastToday.videos, firstToday.videos);
+  document.getElementById("channelSubsDiff").innerHTML = diffText(lastToday.subscribers, firstToday.subscribers);
+  document.getElementById("channelViewsDiff").innerHTML = diffText(lastToday.views, firstToday.views);
+  document.getElementById("channelVideosDiff").innerHTML = diffText(lastToday.videos, firstToday.videos);
 
-  const labels = dayData.map(i => new Date(i.updated_at).toLocaleTimeString("ru-RU"));
+  const labels = dayData.map(i => formatTime(i.updated_at));
   const channelData = dayData.map(i => getChannelFromItem(i, id) || {});
 
-  channelSubsChart = drawChart(
-    "channelSubsChart",
-    channelSubsChart,
-    labels,
-    channelData.map(c => c.subscribers || null),
-    "Подписчики"
-  );
-
-  channelViewsChart = drawChart(
-    "channelViewsChart",
-    channelViewsChart,
-    labels,
-    channelData.map(c => c.views || null),
-    "Просмотры"
-  );
-
-  channelVideosChart = drawChart(
-    "channelVideosChart",
-    channelVideosChart,
-    labels,
-    channelData.map(c => c.videos || null),
-    "Видео"
-  );
+  channelSubsChart = drawChart("channelSubsChart", channelSubsChart, labels, channelData.map(c => c.subscribers || null), "Подписчики");
+  channelViewsChart = drawChart("channelViewsChart", channelViewsChart, labels, channelData.map(c => c.views || null), "Просмотры");
+  channelVideosChart = drawChart("channelVideosChart", channelVideosChart, labels, channelData.map(c => c.videos || null), "Видео");
 }
 
-function drawChart(id, oldChart, labels, data, label) {
-  if (oldChart) oldChart.destroy();
+function drawChart(id, oldChart, labels, data, label){
+  if(oldChart) oldChart.destroy();
 
   return new Chart(document.getElementById(id), {
     type: "line",
@@ -452,17 +303,10 @@ function drawChart(id, oldChart, labels, data, label) {
       },
       plugins: {
         zoom: {
-          pan: {
-            enabled: true,
-            mode: "x"
-          },
+          pan: { enabled: true, mode: "x" },
           zoom: {
-            wheel: {
-              enabled: true
-            },
-            pinch: {
-              enabled: true
-            },
+            wheel: { enabled: true },
+            pinch: { enabled: true },
             mode: "x"
           }
         }
@@ -471,7 +315,22 @@ function drawChart(id, oldChart, labels, data, label) {
   });
 }
 
+function resetZoomAll(){
+  if(subsChart) subsChart.resetZoom();
+  if(viewsChart) viewsChart.resetZoom();
+  if(videosChart) videosChart.resetZoom();
+  if(channelSubsChart) channelSubsChart.resetZoom();
+  if(channelViewsChart) channelViewsChart.resetZoom();
+  if(channelVideosChart) channelVideosChart.resetZoom();
+}
+
 document.getElementById("daySelect").addEventListener("change", () => {
+  renderOverview();
+  renderChannel();
+});
+
+document.getElementById("timeMode").addEventListener("change", e => {
+  timeMode = e.target.value;
   renderOverview();
   renderChannel();
 });
